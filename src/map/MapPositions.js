@@ -131,7 +131,7 @@ const MapPositions = ({ positions, onClick, showStatus, selectedPosition, titleF
         ],
         layout: {
           'icon-image': 'direction',
-          'icon-size': iconScale,
+          'icon-size': iconScale * 2,
           'icon-allow-overlap': true,
           'icon-rotate': ['get', 'rotation'],
           'icon-rotation-alignment': 'map',
