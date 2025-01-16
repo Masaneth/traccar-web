@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Typography } from '@mui/material';
 
-const TripStopTime = ({ deviceId, speed }) => {
+const TripStopTime = ({ deviceId }) => {
   const [timeStopped, setTimeStopped] = useState(null);
   const [timeMoving, setTimeMoving] = useState(null);
+  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const toISOWithTimezone = (date) => {
-    const tzOffset = date.getTimezoneOffset() * 60000;
-    const localISOTime = new Date(date.getTime() - tzOffset).toISOString();
+    const localISOTime = new Date(date.getTime()).toISOString();
     return `${localISOTime.slice(0, -1)}Z`; // Ensure it ends with 'Z' to indicate UTC
   };
 
@@ -16,8 +16,9 @@ const TripStopTime = ({ deviceId, speed }) => {
     const totalSeconds = Math.floor(milliseconds / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
 
-    return `${hours}h ${minutes}m`;
+    return `${hours}h ${minutes}m ${seconds}s`;
   };
 
   useEffect(() => {
@@ -32,44 +33,55 @@ const TripStopTime = ({ deviceId, speed }) => {
         const toMadridTime = toISOWithTimezone(to);
         const fromMadridTime = toISOWithTimezone(from);
 
-        const isStopped = speed < 2;
-        // console.log('¿Está parado?', isStopped);
+        // Fetch stop data
+        const stopResponse = await fetch(`/api/reports/stops?from=${fromMadridTime}&to=${toMadridTime}&deviceId=${deviceId}`, {
+          headers: { Accept: 'application/json' },
+        });
 
-        if (isStopped) {
-          const stopResponse = await fetch(`/api/reports/stops?from=${fromMadridTime}&to=${toMadridTime}&deviceId=${deviceId}`, {
-            headers: { Accept: 'application/json' },
-          });
-          // console.log(`/api/reports/stops?from=${fromMadridTime}&to=${toMadridTime}&deviceId=${deviceId}`);
-          if (!stopResponse.ok) {
-            throw new Error(`Error fetching stop data: ${await stopResponse.text()}`);
-          }
-
-          const stopData = await stopResponse.json();
-          // console.log('Datos de la API de paradas:', stopData);
-
-          const lastStop = stopData[stopData.length - 1];
-          const { duration } = lastStop;
-
-          setTimeStopped(formatTime(duration));
-        } else {
-          const tripResponse = await fetch(`/api/reports/trips?from=${fromMadridTime}&to=${toMadridTime}&deviceId=${deviceId}`, {
-            headers: { Accept: 'application/json' },
-          });
-
-          if (!tripResponse.ok) {
-            throw new Error(`Error fetching trip data: ${await tripResponse.text()}`);
-          }
-
-          const tripData = await tripResponse.json();
-          // console.log('Datos de la API de viajes:', tripData);
-
-          const lastTrip = tripData[tripData.length - 1];
-          const { duration } = lastTrip;
-
-          setTimeMoving(formatTime(duration));
+        if (!stopResponse.ok) {
+          throw new Error(`Error fetching stop data: ${await stopResponse.text()}`);
         }
+
+        const stopData = await stopResponse.json();
+        const lastStop = stopData[stopData.length - 1];
+        const lastStopEndTime = lastStop ? new Date(lastStop.endTime).getTime() : null;
+        const durationStopped = lastStop ? lastStop.duration : 0;
+
+        // Fetch trip data
+        const tripResponse = await fetch(`/api/reports/trips?from=${fromMadridTime}&to=${toMadridTime}&deviceId=${deviceId}`, {
+          headers: { Accept: 'application/json' },
+        });
+
+        if (!tripResponse.ok) {
+          throw new Error(`Error fetching trip data: ${await tripResponse.text()}`);
+        }
+
+        const tripData = await tripResponse.json();
+        const lastTrip = tripData[tripData.length - 1];
+        const lastTripEndTime = lastTrip ? new Date(lastTrip.endTime).getTime() : null;
+        const durationMoving = lastTrip ? lastTrip.duration : 0;
+
+        const now = new Date().getTime();
+
+        let currentStatus = null;
+        let time = 0;
+
+        // Determine the most recent end time
+        if (lastStopEndTime && (!lastTripEndTime || lastStopEndTime > lastTripEndTime)) {
+          currentStatus = 'parado';
+          time = now - lastStopEndTime + durationStopped;
+          setTimeStopped(formatTime(time));
+        } else if (lastTripEndTime) {
+          currentStatus = 'en movimiento';
+          time = now - lastTripEndTime + durationMoving;
+          setTimeMoving(formatTime(time));
+        }
+
+        setStatus(currentStatus);
       } catch (error) {
-        throw new Error(`Error fetching trip data: ${error}`);
+        setTimeStopped('Error al obtener datos');
+        setTimeMoving('Error al obtener datos');
+        setStatus(null);
       } finally {
         setLoading(false);
       }
@@ -86,17 +98,17 @@ const TripStopTime = ({ deviceId, speed }) => {
 
   return (
     <div>
-      {timeStopped !== null ? (
-        <Typography variant="body1">
-          Tiempo Parado:
-          {' '}
-          {timeStopped}
-        </Typography>
-      ) : (
+      {status === 'en movimiento' && timeMoving ? (
         <Typography variant="body1">
           Tiempo en Movimiento:
           {' '}
           {timeMoving}
+        </Typography>
+      ) : (
+        <Typography variant="body1">
+          Tiempo Parado:
+          {' '}
+          {timeStopped}
         </Typography>
       )}
     </div>

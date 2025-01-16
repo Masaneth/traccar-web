@@ -217,7 +217,7 @@ const StatusCard = ({ deviceId, position, onClose, disableActions, desktopPaddin
                 <CardContent className={classes.content}>
                   <Table size="small" classes={{ root: classes.table }}>
                     <TableBody>
-                      <TripStopTime deviceId={deviceId} speed={position.speed} />
+                      <TripStopTime deviceId={deviceId} />
                       {positionItems.split(',').filter((key) => position.hasOwnProperty(key) || position.attributes.hasOwnProperty(key)).map((key) => (
                         <StatusRow
                           key={key}
