@@ -35,7 +35,7 @@ import usePositionAttributes from '../attributes/usePositionAttributes';
 import { devicesActions } from '../../store';
 import { useCatch, useCatchCallback } from '../../reactHelper';
 import { useAttributePreference } from '../util/preferences';
-import TripStopTime from './TripStopTime';
+import { useVehicleStatus } from '../../vehicleStatusService';
 
 const useStyles = makeStyles((theme) => ({
   card: {
@@ -132,7 +132,7 @@ const StatusCard = ({ deviceId, position, onClose, disableActions, desktopPaddin
 
   const positionAttributes = usePositionAttributes(t);
   const positionItems = useAttributePreference('positionItems', 'fixTime,address,speed,totalDistance');
-
+  const vehicleStatus = useVehicleStatus(deviceId);
   const navigationAppLink = useAttributePreference('navigationAppLink');
   const navigationAppTitle = useAttributePreference('navigationAppTitle');
 
@@ -217,7 +217,14 @@ const StatusCard = ({ deviceId, position, onClose, disableActions, desktopPaddin
                 <CardContent className={classes.content}>
                   <Table size="small" classes={{ root: classes.table }}>
                     <TableBody>
-                      <TripStopTime deviceId={deviceId} />
+                      {vehicleStatus && (
+
+                        <StatusRow
+                          name={`Tiempo ${vehicleStatus.isMoving ? 'En Movimiento' : 'Parado'}`}
+                          content={vehicleStatus.stateDuration}
+                        />
+
+                      )}
                       {positionItems.split(',').filter((key) => position.hasOwnProperty(key) || position.attributes.hasOwnProperty(key)).map((key) => (
                         <StatusRow
                           key={key}
