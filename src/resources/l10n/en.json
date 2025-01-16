@@ -122,6 +122,7 @@
     "calendarSaturday": "Saturday",
     "attributeShowGeofences": "Show Geofences",
     "attributeSpeedLimit": "Speed Limit",
+    "deviceShowAttribute": "Show Attribute on SideBar",
     "attributeFuelDropThreshold": "Fuel Drop Threshold",
     "attributeFuelIncreaseThreshold": "Fuel Increase Threshold",
     "attributePolylineDistance": "Polyline Distance",
